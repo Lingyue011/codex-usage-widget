@@ -1,45 +1,105 @@
 # Codex Usage Widget
 
-A tiny Windows floating window that shows your latest Codex usage snapshot from local session logs.
+Small always-on-top Windows widget for viewing the latest Codex usage snapshot from local logs.
 
-## What it shows
+> Unofficial utility. This is not an OpenAI plugin and not an official Codex feature.
 
-- `5 小时` window remaining percent and reset time
-- `1 周` window remaining percent and reset time
-- a small status badge for `手动`, `等待`, or `滞后`
+## What This Is
 
-## Why this is a standalone widget
+If you often open the Codex account menu just to check `Remaining usage`, this tool keeps a tiny floating panel on your desktop and shows the latest usage snapshot that Codex has already written to local session logs.
 
-Codex plugins are built to bundle skills, app integrations, and MCP servers. They are not a general desktop UI extension point for arbitrary always-on-top windows.
+It is designed to be:
 
-Codex does have a built-in floating overlay for active thread status, but it does not show the quota panel values.
+- small
+- manual-refresh only
+- easy to share
+- dependency-light
 
-## Run it
+## Features
 
-Double-click:
+- Shows both usage windows: `5 hours` and `1 week`
+- Shows the next reset time for each window
+- Always on top and draggable
+- Reads once on startup, then refreshes only when you click the refresh button
+- Uses only Python standard library modules such as `tkinter`
 
-- [launch_codex_usage_widget.vbs](/C:/Users/13949/OneDrive/PythonCode/codex_usage_widget/launch_codex_usage_widget.vbs)
+## How It Works
 
-Or run from PowerShell:
+The widget reads the latest `token_count` event and its `rate_limits` data from local Codex session logs, typically under:
+
+- `%USERPROFILE%\.codex\sessions\**\*.jsonl`
+
+If you use a custom Codex home directory, you can override it with `--codex-home`.
+
+This tool does **not** call any remote API. It only reads files that Codex already stores locally on your machine.
+
+## Files
+
+- [codex_usage_widget.py](./codex_usage_widget.py): main widget
+- [launch_codex_usage_widget.vbs](./launch_codex_usage_widget.vbs): Windows double-click launcher
+
+## Requirements
+
+- Windows
+- Codex desktop with local session logs
+- Python 3
+- `tkinter` available in your Python installation
+
+## Quick Start
+
+### Option 1: Double-click
+
+Run:
+
+- [launch_codex_usage_widget.vbs](./launch_codex_usage_widget.vbs)
+
+### Option 2: PowerShell
 
 ```powershell
-C:\Users\13949\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe `
-  C:\Users\13949\OneDrive\PythonCode\codex_usage_widget\codex_usage_widget.py
+python .\codex_usage_widget.py
 ```
 
-## Debug mode
-
-Print the latest parsed snapshot once:
+## Optional Arguments
 
 ```powershell
-C:\Users\13949\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe `
-  C:\Users\13949\OneDrive\PythonCode\codex_usage_widget\codex_usage_widget.py --once
+python .\codex_usage_widget.py --corner top-left
+python .\codex_usage_widget.py --codex-home "D:\Custom\.codex"
+python .\codex_usage_widget.py --once
 ```
+
+Available options:
+
+- `--corner`: initial position, one of `top-right`, `top-left`, `bottom-right`, `bottom-left`
+- `--codex-home`: custom Codex data directory
+- `--once`: print the latest parsed snapshot once and exit
+
+## Share With Others
+
+The project is self-contained and easy to pass around.
+
+You can share it by:
+
+- sending the GitHub repository link
+- letting someone download the repository ZIP
+- copying the project folder directly
+
+For normal use, the important files are:
+
+- `codex_usage_widget.py`
+- `launch_codex_usage_widget.vbs`
+
+## Limitations
+
+- The widget can only show the latest snapshot that Codex has already written to local logs.
+- If Codex has not written a newer `token_count` event yet, clicking refresh will still show the previous saved values.
+- This project is currently intended for Windows desktop use.
+
+## Privacy
+
+This tool only reads local Codex session files on your machine. It does not upload usage data anywhere by itself.
 
 ## Notes
 
-- The widget reads `C:\Users\13949\.codex\sessions\**\*.jsonl`.
-- It reads once on startup.
-- After that, it only rescans when you click the refresh button.
-- If Codex has not written a new `token_count` event yet, the widget can only show the last logged snapshot.
-- The window starts in the top-right corner, stays on top, and can be dragged anywhere.
+- The window is intentionally minimal and compact.
+- Manual refresh is used by design to avoid continuous background scanning.
+- This repository is meant to share a lightweight local utility, not a full Codex extension system.
