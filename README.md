@@ -21,6 +21,7 @@ It is designed to be:
 - Shows the next reset time for each window
 - Always on top and draggable
 - Reads once on startup, then refreshes only when you click the refresh button
+- Supports Windows login startup via the user Startup folder
 - Uses only Python standard library modules such as `tkinter`
 
 ## How It Works
@@ -37,6 +38,8 @@ This tool does **not** call any remote API. It only reads files that Codex alrea
 
 - [codex_usage_widget.py](./codex_usage_widget.py): main widget
 - [launch_codex_usage_widget.vbs](./launch_codex_usage_widget.vbs): Windows double-click launcher
+- [enable_startup.vbs](./enable_startup.vbs): double-click helper to enable login startup
+- [disable_startup.vbs](./disable_startup.vbs): double-click helper to disable login startup
 
 ## Requirements
 
@@ -59,6 +62,50 @@ Run:
 python .\codex_usage_widget.py
 ```
 
+## Startup At Login
+
+This update adds optional Windows login startup. When enabled, the widget launches automatically after the current Windows user signs in.
+
+It works by creating a small per-user startup stub:
+
+- `Codex Usage Widget Startup.vbs`
+
+inside the Windows Startup folder:
+
+- `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup`
+
+The startup helper calls [launch_codex_usage_widget.vbs](./launch_codex_usage_widget.vbs), which then starts [codex_usage_widget.py](./codex_usage_widget.py). It does not require administrator access and does not write to the Windows registry.
+
+### Easiest way
+
+Double-click:
+
+- [enable_startup.vbs](./enable_startup.vbs)
+
+This installs the startup stub for the current Windows user. The widget will start the next time you sign in to Windows.
+
+To turn auto-start off later, double-click:
+
+- [disable_startup.vbs](./disable_startup.vbs)
+
+This removes only the startup stub. It does not delete the widget files.
+
+### PowerShell
+
+```powershell
+python .\codex_usage_widget.py --install-startup
+python .\codex_usage_widget.py --startup-status
+python .\codex_usage_widget.py --remove-startup
+```
+
+Use:
+
+- `--install-startup` to enable auto-start
+- `--startup-status` to print the current startup configuration
+- `--remove-startup` to disable auto-start
+
+Only one of these startup commands should be used at a time.
+
 ## Optional Arguments
 
 ```powershell
@@ -72,6 +119,9 @@ Available options:
 - `--corner`: initial position, one of `top-right`, `top-left`, `bottom-right`, `bottom-left`
 - `--codex-home`: custom Codex data directory
 - `--once`: print the latest parsed snapshot once and exit
+- `--install-startup`: enable login startup for the current Windows user
+- `--remove-startup`: disable login startup for the current Windows user
+- `--startup-status`: print the current startup configuration
 
 ## Share With Others
 

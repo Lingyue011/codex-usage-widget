@@ -16,6 +16,7 @@ MAX_TAIL_BYTES = 256 * 1024
 WINDOW_WIDTH = 252
 WINDOW_HEIGHT = 116
 WINDOW_MARGIN = 10
+STARTUP_STUB_NAME = "Codex Usage Widget Startup.vbs"
 
 CARD_BG = "#F7F2EA"
 CARD_BORDER = "#D9CCBC"
@@ -36,6 +37,67 @@ LABEL_FIVE_HOURS = "5 \u5c0f\u65f6"
 LABEL_ONE_WEEK = "1 \u5468"
 TEXT_WAITING = "\u7b49\u5f85"
 TEXT_STALE = "\u6ede\u540e"
+
+
+def appdata_dir() -> Path:
+    raw = os.environ.get("APPDATA")
+    if raw:
+        return Path(raw).expanduser()
+    return Path.home() / "AppData" / "Roaming"
+
+
+def startup_folder() -> Path:
+    return appdata_dir() / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup"
+
+
+def launcher_path() -> Path:
+    return Path(__file__).resolve().with_name("launch_codex_usage_widget.vbs")
+
+
+def startup_stub_path() -> Path:
+    return startup_folder() / STARTUP_STUB_NAME
+
+
+def startup_stub_contents() -> str:
+    launcher_literal = str(launcher_path())
+    return (
+        "Option Explicit\r\n\r\n"
+        "Dim shell\r\n"
+        "Set shell = CreateObject(\"WScript.Shell\")\r\n"
+        f"shell.Run Chr(34) & \"{launcher_literal}\" & Chr(34), 0, False\r\n"
+    )
+
+
+def startup_enabled() -> bool:
+    return startup_stub_path().exists()
+
+
+def install_startup() -> str:
+    launcher = launcher_path()
+    if not launcher.exists():
+        raise FileNotFoundError(f"Launcher not found: {launcher}")
+
+    folder = startup_folder()
+    folder.mkdir(parents=True, exist_ok=True)
+    stub = startup_stub_path()
+    stub.write_text(startup_stub_contents(), encoding="ascii", newline="")
+    return str(stub)
+
+
+def remove_startup() -> str:
+    stub = startup_stub_path()
+    if stub.exists():
+        stub.unlink()
+    return str(stub)
+
+
+def startup_status_payload() -> dict[str, str | bool]:
+    return {
+        "enabled": startup_enabled(),
+        "startup_folder": str(startup_folder()),
+        "startup_stub": str(startup_stub_path()),
+        "launcher": str(launcher_path()),
+    }
 
 
 def default_codex_home() -> Path:
@@ -412,12 +474,51 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print the latest snapshot once instead of opening the widget.",
     )
+    parser.add_argument(
+        "--install-startup",
+        action="store_true",
+        help="Install a user-level autostart script in the Windows Startup folder.",
+    )
+    parser.add_argument(
+        "--remove-startup",
+        action="store_true",
+        help="Remove the user-level autostart script from the Windows Startup folder.",
+    )
+    parser.add_argument(
+        "--startup-status",
+        action="store_true",
+        help="Print whether user-level autostart is currently enabled.",
+    )
     return parser
 
 
 def main() -> int:
     args = build_parser().parse_args()
     codex_home = Path(args.codex_home).expanduser()
+
+    action_count = sum(
+        [
+            bool(args.once),
+            bool(args.install_startup),
+            bool(args.remove_startup),
+            bool(args.startup_status),
+        ]
+    )
+    if action_count > 1:
+        print("Choose only one of --once, --install-startup, --remove-startup, or --startup-status.")
+        return 2
+
+    if args.install_startup:
+        print(f"Installed startup stub at: {install_startup()}")
+        return 0
+
+    if args.remove_startup:
+        print(f"Removed startup stub at: {remove_startup()}")
+        return 0
+
+    if args.startup_status:
+        print(json.dumps(startup_status_payload(), ensure_ascii=False, indent=2))
+        return 0
 
     finder = SnapshotFinder(codex_home)
     if args.once:
