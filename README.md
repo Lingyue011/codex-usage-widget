@@ -94,6 +94,7 @@ python .\codex_usage_widget.py --once
 
 Available options:
 - `--mode`: Initial mode, either `codex` or `anti` (default: `codex`)
+- `--interval`: Auto-refresh interval in minutes (default: `5`, set `0` to disable)
 - `--corner`: Initial screen placement: `top-right`, `top-left`, `bottom-right`, `bottom-left`
 - `--codex-home`: Custom Codex data directory (defaults to `%USERPROFILE%\.codex`)
 - `--once`: Output the latest parsed snapshot for both Codex and Antigravity to terminal and exit

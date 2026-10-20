@@ -27,7 +27,7 @@ MAX_TAIL_BYTES = 256 * 1024
 WINDOW_WIDTH = 232
 WINDOW_HEIGHT = 134
 WINDOW_MARGIN = 12
-AUTO_REFRESH_INTERVAL_MS = 5 * 60 * 1000  # 5 minutes
+AUTO_REFRESH_INTERVAL_MINUTES = 5
 STARTUP_STUB_NAME = "Codex Usage Widget Startup.vbs"
 
 # Refined Modern Warm Palette
@@ -506,11 +506,19 @@ class AntigravityQuotaFinder:
 # -------------------------------------------------------------
 
 class UsageWidget:
-    def __init__(self, root: tk.Tk, codex_home: Path, corner: str, initial_mode: str = "codex") -> None:
+    def __init__(
+        self,
+        root: tk.Tk,
+        codex_home: Path,
+        corner: str,
+        initial_mode: str = "codex",
+        auto_refresh_minutes: int = AUTO_REFRESH_INTERVAL_MINUTES,
+    ) -> None:
         self.root = root
         self.corner = corner
         self.mode = initial_mode  # "codex" or "anti"
         self.active_anti_key = "argon"
+        self.auto_refresh_ms = max(0, int(auto_refresh_minutes * 60 * 1000))
 
         self.codex_finder = CodexSnapshotFinder(codex_home)
         self.anti_finder = AntigravityQuotaFinder()
@@ -594,15 +602,16 @@ class UsageWidget:
         self.place_in_corner()
         self.set_mode(self.mode)
 
-        # Start gentle background auto-refresh timer (every 5 mins)
+        # Start gentle background auto-refresh timer
         self.schedule_auto_refresh()
 
     def schedule_auto_refresh(self) -> None:
-        self.root.after(AUTO_REFRESH_INTERVAL_MS, self._on_auto_refresh)
+        if self.auto_refresh_ms > 0:
+            self.root.after(self.auto_refresh_ms, self._on_auto_refresh)
 
     def _on_auto_refresh(self) -> None:
         try:
-            self.refresh(force_rescan=False)
+            self.refresh(force_rescan=True)
         finally:
             self.schedule_auto_refresh()
 
@@ -927,6 +936,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Initial corner for the floating window.",
     )
     parser.add_argument(
+        "--interval",
+        type=int,
+        default=AUTO_REFRESH_INTERVAL_MINUTES,
+        help="Auto-refresh interval in minutes (default: 5, set 0 to disable).",
+    )
+    parser.add_argument(
         "--once",
         action="store_true",
         help="Print the latest snapshot once instead of opening the widget.",
@@ -981,7 +996,13 @@ def main() -> int:
         return print_combined_snapshot(codex_home)
 
     root = tk.Tk()
-    UsageWidget(root, codex_home=codex_home, corner=args.corner, initial_mode=args.mode)
+    UsageWidget(
+        root,
+        codex_home=codex_home,
+        corner=args.corner,
+        initial_mode=args.mode,
+        auto_refresh_minutes=args.interval,
+    )
     root.mainloop()
     return 0
 
